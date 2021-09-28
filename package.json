@@ -1,0 +1,29 @@
+{
+  "name": "pod-patch",
+  "version": "0.0.4",
+  "description": "Patching the Pod specfiles in ReactNative projects.",
+  "main": "index.js",
+  "bin":{
+    "pod-patch": "patch.sh"
+  },
+  "scripts": {
+    "patch": "node_modules/pod-patch/patch.sh",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/geekbrother/pod-patch.git"
+  },
+  "keywords": [
+    "Pod",
+    "Podspec",
+    "patch",
+    "patching"
+  ],
+  "author": "Max Kalashnikoff",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/geekbrother/pod-patch/issues"
+  },
+  "homepage": "https://github.com/geekbrother/pod-patch#readme"
+}
