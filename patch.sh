@@ -4,28 +4,54 @@
 # It download, patches the podspec and updating Podfile
 # based on the PodName@Version.patch files convention.
 #
-# Author: Kalashnikov Max (max@comm.app)
+# Author: Max Kalashnikov (max@comm.app)
 # Created for: Comm.app
 #
-# Usage:
-# Run it as npx or bash script from the 'native' directory
-# of the ReactNative project.
+# Usage: npx pod-patch [-h Usage] [-v Version] [-d <path/Podfile> Podfile path ] [-p <path> .patch files directory]
+# Run it as npx or bash script from the 'native' directory of
+# the ReactNative project.
+readonly SCRIPT_VERSION='0.0.5'
 set -e
 
-# Constants
-## Paths relatively to the 'native/ios' directory
-readonly PATCHES_DIR="patches"
-readonly PODFILE_PATH="Podfile"
+# Default parameters
+## Directory relatively to the ReactNative '/native' directory where the .patch files are.
+PATCHES_DIR="./ios/patches"
+## Cocoapods Podfile path
+PODFILE_PATH="./ios/Podfile"
 
-# Console output functions
-readonly CRED=$(tput setaf 1)
-readonly CGREEN=$(tput setaf 2)
-readonly CYELLOW=$(tput setaf 3)
-readonly CRESET=$(tput sgr0)
+# Parsing CLI arguments
+while getopts ":hvp:d:" opt; do
+    case ${opt} in
+    h)
+        echo "pod-patch is a Podspec files patching tool based on the .patch files."
+        echo "Run it as npx or bash script from the 'native' directory of the ReactNative project."
+        echo "Version: ${SCRIPT_VERSION}"
+        echo "Usage: npx pod-patch [-h Usage] [-v Version] [-d <path/Podfile> Podfile path ] [-p <path> .patch files directory]"
+        exit 0
+        ;;
+    v)
+        echo "pod-patch version: ${SCRIPT_VERSION}"
+        exit 0
+        ;;
+    p)
+        PATCHES_DIR=${OPTARG}
+        ;;
+    d)
+        PODFILE_PATH=${OPTARG}
+        ;;
+    esac
+done
+shift $((OPTIND - 1))
 
 # Console logging
 # Usage: LOG SKIP|INFO|SUCCESS|ERROR "Message text"
 function LOG() {
+    # Console colors
+    local CRED=$(tput setaf 1)
+    local CGREEN=$(tput setaf 2)
+    local CYELLOW=$(tput setaf 3)
+    local CRESET=$(tput sgr0)
+
     case $1 in
     SKIP) echo "[skip] $2" ;;
     INFO) echo "${CYELLOW}[info] $2${CRESET}" ;;
@@ -38,18 +64,31 @@ function LOG() {
 # Patching function
 # Usage: MAKE_PATCH $POD_NAME $POD_VERSION
 function MAKE_PATCH() {
+    # Arguments
     local readonly POD_NAME=$1
-    local readonly POD_VERSION=$2
+    local POD_VERSION=$2
+
+    if [ -z "$POD_VERSION" ]; then
+        local PATCH_FILE="${PATCHES_DIR}/${POD_NAME}.patch"
+    else
+        local PATCH_FILE="${PATCHES_DIR}/${POD_NAME}@${POD_VERSION}.patch"
+    fi
+
     # Read the version of the Pod from the Podfile
-    local POD_VERSION_PODFILE=$(cat ./ios/${PODFILE_PATH} | grep "pod '${POD_NAME}'" | awk '{print $3}' | tr -d "'")
+    local POD_VERSION_PODFILE=$(cat ${PODFILE_PATH} | grep "pod '${POD_NAME}'" | awk '{print $3}' | tr -d "'")
     if [[ $POD_VERSION_PODFILE =~ ^[0-9]+(\.[0-9]+){2,3}$ ]]; then
         LOG INFO "${POD_NAME} has ${POD_VERSION_PODFILE} version in the Podfile"
-        # Error if Podfile version not equal with the patch version
+        # If POD_VERSION is empty we have a .patch file without version, go with the
+        # version from the Podfile
+        if [ -z "$POD_VERSION" ]; then
+            POD_VERSION=$POD_VERSION_PODFILE
+        fi
+        # Error if Podfile version not equal with the .patch version
         if [ $POD_VERSION_PODFILE != $POD_VERSION ]; then
             LOG ERROR "Podfile version ${POD_VERSION_PODFILE} not equal to patch version ${POD_VERSION}"
         fi
     elif [[ $POD_VERSION_PODFILE =~ .*podspec.* ]]; then
-        LOG SKIP "${POD_NAME} pod seems already patched and has a :podspec property"
+        LOG SKIP "${POD_NAME} podspec already patched and has a :podspec property in Podfile"
         return
     else
         LOG ERROR "Wrong ${POD_NAME} pod version ${POD_VERSION_PODFILE} in the Podfile"
@@ -62,18 +101,12 @@ function MAKE_PATCH() {
     SPEC_PATH=${SPEC_PATH%/*}
     local GITHUB_SPEC_URL="https://raw.githubusercontent.com/CocoaPods/Specs/master${SPEC_PATH}/${POD_VERSION}/${POD_NAME}.podspec.json"
 
-    # Check if we have a patch file to patch the Pod's podspec
-    local PATCH_FILE="${PATCHES_DIR}/${POD_NAME}@${POD_VERSION}.patch"
-    if [ ! -f "./ios/$PATCH_FILE" ]; then
-        LOG ERROR "Patch file ${PATCH_FILE} for ${POD_NAME} does not exist, nothing to patch."
-    fi
-
     local PATCHED_PODSPEC_PATCH="${PATCHES_DIR}/${POD_NAME}/${POD_VERSION}/${POD_NAME}.podspec.json"
-    rm -f "./ios/${PATCHED_PODSPEC_PATCH}"
-    mkdir -p "./ios/${PATCHES_DIR}/${POD_NAME}/${POD_VERSION}"
+    rm -f "${PATCHED_PODSPEC_PATCH}"
+    mkdir -p "${PATCHES_DIR}/${POD_NAME}/${POD_VERSION}"
 
     # Download the podspec file for the pod
-    local CODE=$(curl -sSL -w '%{http_code}' --output "./ios/${PATCHED_PODSPEC_PATCH}" "${GITHUB_SPEC_URL}")
+    local CODE=$(curl -sSL -w '%{http_code}' --output "${PATCHED_PODSPEC_PATCH}" "${GITHUB_SPEC_URL}")
     if [[ "$CODE" =~ ^2 ]]; then
         LOG INFO "Podspec downloaded"
     elif [[ "$CODE" == 404 ]]; then
@@ -84,22 +117,41 @@ function MAKE_PATCH() {
 
     # Patch the downloaded podspec file and replace the Pod
     # in Podfile with the local podspec path
-    patch "./ios/${PATCHED_PODSPEC_PATCH}" "./ios/${PATCH_FILE}"
-    sed -i -e "s|.*pod.*'${POD_NAME}'.*|  pod '${POD_NAME}', :podspec => './${PATCHED_PODSPEC_PATCH}'|" ./ios/${PODFILE_PATH}
+    patch "${PATCHED_PODSPEC_PATCH}" "${PATCH_FILE}"
+    sed -i '' -e "s|.*pod.*'${POD_NAME}'.*|  pod '${POD_NAME}', :podspec => './${PATCHED_PODSPEC_PATCH#"./ios/"}'|" ${PODFILE_PATH}
 
-    LOG SUCCESS "Podfile updated with the ${POD_NAME} patched Pod"
+    LOG SUCCESS "Podfile updated with the ${POD_NAME} patched pod"
 }
 
+# Check if the directory with the .patch files exists
+if [[ ! -d $PATCHES_DIR ]]; then
+    LOG ERROR "Directory with .patch files doesn't exist: ${PATCHES_DIR}"
+fi
+# Check if the Podfile exists
+if [[ ! -f $PODFILE_PATH ]]; then
+    LOG ERROR "Podfile not found: ${PODFILE_PATH}"
+fi
+
 # Read the directory with the .patch files
-# and extract the pod name and version from
-# the filename
-for TO_PATCH_FILE in "./ios/${PATCHES_DIR}"/*.patch; do
+# and extract the Pod name and version from
+# the .patch filename
+# We can have a two types of the .patch files:
+# - podName@Version.patch: With the patch for the specific version of the Pod.
+# - podName.patch: Without specific version. It will be applied to all versions.
+for TO_PATCH_FILE in "${PATCHES_DIR}"/*.patch; do
     if [ -f "$TO_PATCH_FILE" ]; then
         TO_PATCH_FILE=$(basename $TO_PATCH_FILE | awk '{print $1}')
-        POD_NAME="${TO_PATCH_FILE%%@*}"
-        POD_VERSION=$(echo $TO_PATCH_FILE | awk -F "@" '{print $2}' | awk -F ".patch" '{print $1}')
-        LOG INFO "Found ${POD_NAME} Pod patch for ${POD_VERSION} version"
-
+        # If the .patch file with the specific version:
+        if [[ $TO_PATCH_FILE =~ "@" ]]; then
+            POD_NAME="${TO_PATCH_FILE%%@*}"
+            POD_VERSION=$(echo $TO_PATCH_FILE | awk -F "@" '{print $2}' | awk -F ".patch" '{print $1}')
+            LOG INFO "Found ${POD_NAME} pod patch for @${POD_VERSION} version"
+        else
+            # If the .patch file without version
+            POD_NAME="${TO_PATCH_FILE%".patch"}"
+            POD_VERSION=""
+            LOG INFO "Found ${POD_NAME} pod patch for all versions"
+        fi
         # Patching Pod with the certain version
         MAKE_PATCH $POD_NAME $POD_VERSION
     fi
