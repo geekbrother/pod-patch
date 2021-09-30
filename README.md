@@ -64,6 +64,8 @@ target 'App' do
 The tool checks if the Pod is already patched.
 If nothing changed from the already applied patches - it will do nothing.
 
+[![asciicast](https://asciinema.org/a/t77IAxPy1ZEZ84MAesfE4K2Bv.svg)](https://asciinema.org/a/t77IAxPy1ZEZ84MAesfE4K2Bv)
+
 ## Using with the `yarn` or `npm i`
 
 A good practice is to use it linked with the running of `yarn` or `npm i` in the `native` directory in your install script in the `package.json` before the `pod install` execution.

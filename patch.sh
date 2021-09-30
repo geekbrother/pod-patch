@@ -10,7 +10,7 @@
 # Usage: npx pod-patch [-h Usage] [-v Version] [-d <path/Podfile> Podfile path ] [-p <path> .patch files directory]
 # Run it as npx or bash script from the 'native' directory of
 # the ReactNative project.
-readonly SCRIPT_VERSION='0.0.7'
+readonly SCRIPT_VERSION='0.0.8'
 set -e
 
 # Default parameters
