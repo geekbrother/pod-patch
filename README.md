@@ -26,13 +26,13 @@ How not forget what and where was patched and patch them on the new versions or 
 
 As this tool doesn't require many parameters we are using the **convention over configuration** approach.
 
-By default tool will look into the `native/ios/patches` directory for the `.patch` files. The file name itself tells the tool which Pod and which version you want to patch the Pod's `podspec` and use it in your main Podfile.
+By default tool will look into the `native/ios/pod-patch` directory for the `.patch` files. The file name itself tells the tool which Pod and which version you want to patch the Pod's `podspec` and use it in your main Podfile.
 
 The naming convention for the `.patch` files is `podName@version.patch` where `podName` is the name of the Pod and `version` is the Pod version to use for the patch apply.
 
-For example, `native/ios/patches/gRPC-Core@1.40.0.patch` will tell that we want to apply patch from this file to the `gRPC-Core` podspec file for the `1.40.0` version.
+For example, `native/ios/pod-patch/gRPC-Core@1.40.0.patch` will tell that we want to apply patch from this file to the `gRPC-Core` podspec file for the `1.40.0` version.
 
-Also, you can use it without a version. When using `native/ios/patches/gRPC-Core.patch` tool will apply the patch from this file to the `gRPC-Core` pod with the version from your Podfile. When using without a version you need to have a record in the Podfile with the pod and version.
+Also, you can use it without a version. When using `native/ios/pod-patch/gRPC-Core.patch` tool will apply the patch from this file to the `gRPC-Core` pod with the version from your Podfile. When using without a version you need to have a record in the Podfile with the pod and version.
 
 For example:
 
@@ -51,14 +51,14 @@ The tool can be executed as the `npx pod-patch` command in the `native` director
 When running the tool will iterate through your `.patch` files checks if anything has changed and made some magic:
 
 - Checks if there is no version conflicts in your `Podfile` and `.patch` file,
-- Download a `podspec` file for your Pod from the [cocoapods git repo](https://github.com/CocoaPods/Specs/tree/master/Specs) to the `native/ios/patches/{pod-name}/{pod-version}/` directory,
+- Download a `podspec` file for your Pod from the [cocoapods git repo](https://github.com/CocoaPods/Specs/tree/master/Specs) to the `native/ios/pod-patch/.patched/{pod-name}/{pod-version}/` directory,
 - Apply the patch from the `.patch` file to it,
 - Changes the record for the patched **Pod** in the `Podfile` to point it to the local patched podspec. For example, the record for the `gRPC-Core` will automatically change to:
 
 ```ruby
 target 'App' do
     ...
-    pod 'gRPC-Core', :podspec => './patches/gRPC-Core/1.40.0/gRPC-Core.podspec.json'
+    pod 'gRPC-Core', :podspec => './pod-patch/.patched/gRPC-Core/1.40.0/gRPC-Core.podspec.json'
 ```
 
 The tool checks if the Pod is already patched.
@@ -66,15 +66,17 @@ If nothing changed from the already applied patches - it will do nothing.
 
 ## Using with the `yarn` or `npm i`
 
-A good practice is to use is linked with the running of `yarn` or `npm i` in the `native` directory.
+A good practice is to use it linked with the running of `yarn` or `npm i` in the `native` directory in your install script in the `package.json` before the `pod install` execution.
 
-This will updates/install the packages with the transparent checking if all of the Pod patches are up-to-date or need to be applied if something in the `.patch` file changed or `Podspec` has new changes in the pod dependency or version changes.
+This will updates/install the packages with the transparent checking if all of the Pod patches are up-to-date or need to be applied if something in the `.patch` file changed or `Podspec` has new changes in the pod dependency or version changes before the `pod install`.
+
+If using this way with the `git` repo you can add `native/ios/pod-patch/.patched` directory to your `.gitignore`. Because when the tool runs it will check the existence of the local patched podspec files and create those that not exists.
 
 # Pod version changing
 
 In case when the Pod version changed but you already have a `.patch` file for the previous version and it is already applied, but you want to upgrade the Pod and patch to the new version there are three simple steps:
 
-**First**, if your `.patch` file in the `native/ios/patches` has a version format i.e. `gRPC-Core@1.40.0.patch` you need to create a patch file for the new version i.e. `gRPC-Core@1.41.0.patch`.
+**First**, if your `.patch` file in the `native/ios/pod-patch` has a version format i.e. `gRPC-Core@1.40.0.patch` you need to create a patch file for the new version i.e. `gRPC-Core@1.41.0.patch`.
 
 If the `.patch` file in the no-version format i.e. `gRPC-Core.patch` you do nothing here as this is an universal patch for all versions.
 
@@ -94,7 +96,7 @@ If you have a version-agnostic `.patch` file, actually you only need to do a sec
 
 - `-h`: Output the command usage help.
 - `-v`: Output the script version.
-- `-p`: Path to the directory where the `.patch` files are if it differs from the default `native/ios/patches`.
+- `-p`: Path to the directory where the `.patch` files are if it differs from the default `native/ios/pod-patch`.
 - `-d`: Path to the `Podfile` if it differs from the default `native/ios/Podfile`.
 
 # Todo

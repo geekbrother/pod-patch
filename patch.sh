@@ -10,14 +10,16 @@
 # Usage: npx pod-patch [-h Usage] [-v Version] [-d <path/Podfile> Podfile path ] [-p <path> .patch files directory]
 # Run it as npx or bash script from the 'native' directory of
 # the ReactNative project.
-readonly SCRIPT_VERSION='0.0.6'
+readonly SCRIPT_VERSION='0.0.7'
 set -e
 
 # Default parameters
 ## Directory relatively to the ReactNative '/native' directory where the .patch files are.
-PATCHES_DIR="./ios/patches"
+PATCHES_DIR="./ios/pod-patch"
 ## Cocoapods Podfile path
 PODFILE_PATH="./ios/Podfile"
+## Where the patched files will be placed
+readonly PATCHED_SUBDIR=".patched"
 
 # Parsing CLI arguments
 while getopts ":hvp:d:" opt; do
@@ -88,8 +90,15 @@ function MAKE_PATCH() {
             LOG ERROR "Podfile version ${POD_VERSION_PODFILE} not equal to patch version ${POD_VERSION}"
         fi
     elif [[ $POD_VERSION_PODFILE =~ .*podspec.* ]]; then
-        LOG SKIP "${POD_NAME} podspec already patched and has a :podspec property in Podfile"
-        return
+        # If already patched and have a ':podspec =>' we need to check if the patched podspec file exists
+        # in case of this is a git copy with the .patched directory in .gitignore
+        local PODSPEC_PODFILE=$(cat ${PODFILE_PATH} | grep "pod '${POD_NAME}'" | awk '{print $5}' | tr -d "'")
+        if [[ -f "./ios/${PODSPEC_PODFILE##./}" ]]; then
+            LOG SKIP "${POD_NAME} podspec already patched and has a local podspec file in a Podfile"
+            return
+        else
+            LOG INFO "Patched podspec file not found, creating a new one"
+        fi
     else
         LOG ERROR "Wrong ${POD_NAME} pod version ${POD_VERSION_PODFILE} in the Podfile"
     fi
@@ -101,9 +110,9 @@ function MAKE_PATCH() {
     SPEC_PATH=${SPEC_PATH%/*}
     local GITHUB_SPEC_URL="https://raw.githubusercontent.com/CocoaPods/Specs/master${SPEC_PATH}/${POD_VERSION}/${POD_NAME}.podspec.json"
 
-    local PATCHED_PODSPEC_PATCH="${PATCHES_DIR}/${POD_NAME}/${POD_VERSION}/${POD_NAME}.podspec.json"
+    local PATCHED_PODSPEC_PATCH="${PATCHES_DIR}/${PATCHED_SUBDIR}/${POD_NAME}/${POD_VERSION}/${POD_NAME}.podspec.json"
     rm -f "${PATCHED_PODSPEC_PATCH}"
-    mkdir -p "${PATCHES_DIR}/${POD_NAME}/${POD_VERSION}"
+    mkdir -p "${PATCHES_DIR}/${PATCHED_SUBDIR}/${POD_NAME}/${POD_VERSION}"
 
     # Download the podspec file for the pod
     local CODE=$(curl -sSL -w '%{http_code}' --output "${PATCHED_PODSPEC_PATCH}" "${GITHUB_SPEC_URL}")
