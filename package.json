@@ -1,6 +1,6 @@
 {
   "name": "pod-patch",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Patching the Pod specfiles in ReactNative projects.",
   "main": "index.js",
   "bin":{
