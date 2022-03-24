@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Description:
 # Podspec auto patching script for React Native projects.
 # It download, patches the podspec and updating Podfile
