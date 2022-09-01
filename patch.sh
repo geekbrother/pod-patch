@@ -127,7 +127,8 @@ function MAKE_PATCH() {
     # Patch the downloaded podspec file and replace the Pod
     # in Podfile with the local podspec path
     patch "${PATCHED_PODSPEC_PATCH}" "${PATCH_FILE}"
-    sed -i '' -e "s|.*pod.*'${POD_NAME}'.*|  pod '${POD_NAME}', :podspec => './${PATCHED_PODSPEC_PATCH#"./ios/"}'|" ${PODFILE_PATH}
+    sed -i.bak -e "s|.*pod.*'${POD_NAME}'.*|  pod '${POD_NAME}', :podspec => './${PATCHED_PODSPEC_PATCH#"./ios/"}'|" ${PODFILE_PATH}
+    rm -f "${PODFILE_PATH}.bak"
 
     LOG SUCCESS "Podfile updated with the ${POD_NAME} patched pod"
 }
