@@ -4,13 +4,11 @@
 # It download, patches the podspec and updating Podfile
 # based on the PodName@Version.patch files convention.
 #
-# Author: Max Kalashnikov (max@comm.app)
-# Created for: Comm.app
+# Author: Max Kalashnikoff (geekmaks@gmail.com, max@comm.app)
+# Created for: https://comm.app
 #
-# Usage: npx pod-patch [-h Usage] [-v Version] [-d <path/Podfile> Podfile path ] [-p <path> .patch files directory]
-# Run it as npx or bash script from the 'native' directory of
-# the ReactNative project.
-readonly SCRIPT_VERSION='0.0.8'
+# Usage: npx pod-patch -h
+readonly SCRIPT_VERSION='0.0.11'
 set -e
 
 # Default parameters
@@ -20,15 +18,18 @@ PATCHES_DIR="./ios/pod-patch"
 PODFILE_PATH="./ios/Podfile"
 ## Where the patched files will be placed
 readonly PATCHED_SUBDIR=".patched"
+## Podspecs GitHub url for Cocoapods repository
+readonly PODSPECS_URL="https://raw.githubusercontent.com/CocoaPods/Specs"
 
 # Parsing CLI arguments
 while getopts ":hvp:d:" opt; do
     case ${opt} in
     h)
-        echo "pod-patch is a Podspec files patching tool based on the .patch files."
-        echo "Run it as npx or bash script from the 'native' directory of the ReactNative project."
         echo "Version: ${SCRIPT_VERSION}"
         echo "Usage: npx pod-patch [-h Usage] [-v Version] [-d <path/Podfile> Podfile path ] [-p <path> .patch files directory]"
+        echo "Description:"
+        echo "pod-patch is a Podspec files patching tool based on the .patch files."
+        echo "Run it as npx or bash script from the 'native' directory of the ReactNative project."
         exit 0
         ;;
     v)
@@ -48,7 +49,6 @@ shift $((OPTIND - 1))
 # Console logging
 # Usage: LOG SKIP|INFO|SUCCESS|ERROR "Message text"
 function LOG() {
-    # Console colors
     local CRED=$(tput setaf 1)
     local CGREEN=$(tput setaf 2)
     local CYELLOW=$(tput setaf 3)
@@ -66,7 +66,7 @@ function LOG() {
 # Patching function
 # Usage: MAKE_PATCH $POD_NAME $POD_VERSION
 function MAKE_PATCH() {
-    # Arguments
+    # Assigning arguments
     local readonly POD_NAME=$1
     local POD_VERSION=$2
 
@@ -108,7 +108,7 @@ function MAKE_PATCH() {
     SPEC_PATH=${SPEC_PATH##*/trunk}
     SPEC_PATH=${SPEC_PATH%/*}
     SPEC_PATH=${SPEC_PATH%/*}
-    local GITHUB_SPEC_URL="https://raw.githubusercontent.com/CocoaPods/Specs/master${SPEC_PATH}/${POD_VERSION}/${POD_NAME}.podspec.json"
+    local GITHUB_SPEC_URL="${PODSPECS_URL}/master${SPEC_PATH}/${POD_VERSION}/${POD_NAME}.podspec.json"
 
     local PATCHED_PODSPEC_PATCH="${PATCHES_DIR}/${PATCHED_SUBDIR}/${POD_NAME}/${POD_VERSION}/${POD_NAME}.podspec.json"
     rm -f "${PATCHED_PODSPEC_PATCH}"

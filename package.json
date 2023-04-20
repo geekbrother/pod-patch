@@ -1,6 +1,6 @@
 {
   "name": "pod-patch",
-  "version": "0.0.9",
+  "version": "0.0.11",
   "description": "Patching the Pod specfiles in ReactNative projects.",
   "main": "index.js",
   "bin":{
@@ -20,7 +20,11 @@
     "patch",
     "patching"
   ],
-  "author": "Max Kalashnikoff",
+  "author":{
+    "name" : "Max Kalashnikoff",
+    "email" : "geekmaks@gmail.com",
+    "url" : "https://github.com/geekbrother"
+  },
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/geekbrother/pod-patch/issues"
